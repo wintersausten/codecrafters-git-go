@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/zlib"
 	"fmt"
 	"os"
 	"regexp"
@@ -63,8 +64,16 @@ func main() {
       fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
       return
     }
+    defer compressedBlob.Close()
 
     // decompress
+    decompressedBlob, err := zlib.NewReader(compressedBlob)
+    if err != nil {
+      fmt.Fprintf(os.Stderr, "Error decompressing file: %s\n", err)
+      return
+    }
+    defer decompressedBlob.Close()
+
     // read decompressed data
     // output data
 
