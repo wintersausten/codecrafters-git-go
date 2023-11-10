@@ -3,6 +3,7 @@ package main
 import (
 	"compress/zlib"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 )
@@ -57,16 +58,16 @@ func main() {
 
     dir, file := hash[:2], hash[2:]
 
-    // read file in
+    // open compressed blob 
     blobPath := fmt.Sprintf(".git/objects/%s/%s", dir, file)
     compressedBlob, err := os.Open(blobPath)
     if err != nil {
-      fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
+      fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
       return
     }
     defer compressedBlob.Close()
 
-    // decompress
+    // set up blob decompression
     decompressedBlob, err := zlib.NewReader(compressedBlob)
     if err != nil {
       fmt.Fprintf(os.Stderr, "Error decompressing file: %s\n", err)
@@ -74,8 +75,11 @@ func main() {
     }
     defer decompressedBlob.Close()
 
-    // read decompressed data
-    // output data
+    // write decompressed blob to stdout
+    if _, err := io.Copy(os.Stdout, decompressedBlob); err != nil {
+      fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
+      return
+    }
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command %s\n", command)
