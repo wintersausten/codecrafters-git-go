@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-  "regexp"
+	"regexp"
 )
 
 func isValidSHA1(hash string) bool {
@@ -44,18 +44,26 @@ func main() {
   case "cat-file":
     // verify & parse hash
     if len(os.Args) != 3 {
-      fmt.Fprintf(os.Stderr, "usage: mygit cat-file <hash>")
+      fmt.Fprintf(os.Stderr, "usage: mygit cat-file <hash>\n")
       return
     }
 
     hash := os.Args[2]
     if !isValidSHA1(hash) {
-      fmt.Fprintf(os.Stderr, "The provided hash could not be verified, please provide a valid SHA1 hash")
+      fmt.Fprintf(os.Stderr, "The provided hash could not be verified, please provide a valid SHA1 hash\n")
       return
     }
 
     dir, file := hash[:2], hash[2:]
+
     // read file in
+    blobPath := fmt.Sprintf(".git/objects/%s/%s", dir, file)
+    compressedBlob, err := os.Open(blobPath)
+    if err != nil {
+      fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
+      return
+    }
+
     // decompress
     // read decompressed data
     // output data
