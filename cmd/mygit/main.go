@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+  "errors"
 )
 
 func isValidSHA1(hash string) bool {
@@ -62,9 +63,13 @@ func main() {
     blobPath := fmt.Sprintf(".git/objects/%s/%s", dir, file)
     compressedBlob, err := os.Open(blobPath)
     if err != nil {
-      fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
+      if errors.Is(err, os.ErrNotExist) {
+        fmt.Printf("The file corresponding to the hash %s does not exist.\n", hash)
+      } else {
+        fmt.Printf("Error opening file: %s\n", err)
+      }
       return
-    }
+    }   
     defer compressedBlob.Close()
 
     // set up blob decompression
