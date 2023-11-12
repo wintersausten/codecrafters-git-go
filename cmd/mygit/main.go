@@ -64,9 +64,9 @@ func main() {
     compressedBlob, err := os.Open(blobPath)
     if err != nil {
       if errors.Is(err, os.ErrNotExist) {
-        fmt.Printf("The file corresponding to the hash %s does not exist.\n", hash)
+        fmt.Fprintf(os.Stderr, "The file corresponding to the hash %s does not exist.\n", hash)
       } else {
-        fmt.Printf("Error opening file: %s\n", err)
+        fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
       }
       return
     }   
