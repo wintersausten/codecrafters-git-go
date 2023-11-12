@@ -101,9 +101,9 @@ func TestMain(t *testing.T) {
     wantStdout string
     wantStderr string
   }{
-    {[]string{"", "cat-file", "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"}, "if you're reading this it worked", ""},
-    {[]string{"", "cat-file", "invalidsha1"}, "", "The provided hash could not be verified, please provide a valid SHA1 hash\n"},
-    {[]string{"", "cat-file", "67385b86859e3265d93eaf38cad7d06533ac4998"}, "", "The file corresponding to the hash 67385b86859e3265d93eaf38cad7d06533ac4998 does not exist.\n"},
+    {[]string{"", "-p", "cat-file", "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"}, "if you're reading this it worked", ""},
+    {[]string{"", "-p","cat-file", "invalidsha1"}, "", "The provided hash could not be verified, please provide a valid SHA1 hash\n"},
+    {[]string{"", "-p", "cat-file", "67385b86859e3265d93eaf38cad7d06533ac4998"}, "", "The file corresponding to the hash 67385b86859e3265d93eaf38cad7d06533ac4998 does not exist.\n"},
   }
 
   setupTestFiles(t)

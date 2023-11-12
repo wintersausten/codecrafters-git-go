@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
   "errors"
+  "flag"
 )
 
 func isValidSHA1(hash string) bool {
@@ -29,32 +30,57 @@ func main() {
 
 	switch command := os.Args[1]; command {
 	case "init":
-		for _, dir := range []string{".git", ".git/objects", ".git/refs"} {
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
-        return
-			}
-		}
-
-		headFileContents := []byte("ref: refs/heads/master\n")
-		if err := os.WriteFile(".git/HEAD", headFileContents, 0644); err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing file: %s\n", err)
-      return
-		}
-
-		fmt.Println("Initialized git directory")
-
+    initGit()
   case "cat-file":
-    // verify & parse hash
-    if len(os.Args) != 3 {
-      fmt.Fprintf(os.Stderr, "usage: mygit cat-file <hash>\n")
-      return
+    catFile(os.Args[2:])
+
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown command %s\n", command)
+		os.Exit(1)
+	}
+}
+
+func initGit() {
+  for _, dir := range []string{".git", ".git/objects", ".git/refs"} {
+    if err := os.MkdirAll(dir, 0755); err != nil {
+      fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
+      os.Exit(1)
+    }
+  }
+
+  headFileContents := []byte("ref: refs/heads/master\n")
+  if err := os.WriteFile(".git/HEAD", headFileContents, 0644); err != nil {
+    fmt.Fprintf(os.Stderr, "Error writing file: %s\n", err)
+    os.Exit(1)
+  }
+
+  fmt.Println("Initialized git directory")
+}
+
+func catFile(args []string) {
+  catFileCmd := flag.NewFlagSet("cat-file", flag.ExitOnError)
+
+  // Define flags for the cat-file subcommand
+  pFlag := catFileCmd.Bool("p", false, "Some flag description")
+
+  // Parse flags for the cat-file command
+  err := catFileCmd.Parse(args)
+  if err != nil {
+      fmt.Fprintf(os.Stderr, "Error parsing flags for cat-file: %s\n", err)
+      os.Exit(1)
+  }
+
+  // Check if the -p flag is provided
+  if *pFlag {
+    if catFileCmd.NArg() < 1 {
+      fmt.Fprintf(os.Stderr, "usage: mygit cat-file -p {hash}\n")
+      os.Exit(1)
     }
 
-    hash := os.Args[2]
+    hash := catFileCmd.Arg(0)
     if !isValidSHA1(hash) {
       fmt.Fprintf(os.Stderr, "The provided hash could not be verified, please provide a valid SHA1 hash\n")
-      return
+      os.Exit(1)
     }
 
     dir, file := hash[:2], hash[2:]
@@ -68,7 +94,7 @@ func main() {
       } else {
         fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
       }
-      return
+      os.Exit(1)
     }   
     defer compressedBlob.Close()
 
@@ -76,18 +102,14 @@ func main() {
     decompressedBlob, err := zlib.NewReader(compressedBlob)
     if err != nil {
       fmt.Fprintf(os.Stderr, "Error decompressing file: %s\n", err)
-      return
+      os.Exit(1)
     }
     defer decompressedBlob.Close()
 
     // write decompressed blob to stdout
     if _, err := io.Copy(os.Stdout, decompressedBlob); err != nil {
       fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
-      return
+      os.Exit(1)
     }
-
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown command %s\n", command)
-		os.Exit(1)
-	}
+  }
 }
