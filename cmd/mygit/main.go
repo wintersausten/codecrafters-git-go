@@ -4,6 +4,7 @@ import (
 	"compress/zlib"
 	"fmt"
 	"io"
+  "bytes"
 	"os"
 	"regexp"
   "errors"
@@ -107,9 +108,21 @@ func catFile(args []string) {
     defer decompressedBlob.Close()
 
     // write decompressed blob to stdout
-    if _, err := io.Copy(os.Stdout, decompressedBlob); err != nil {
+    blobData, err := io.ReadAll(decompressedBlob)
+    if err != nil {
       fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
       os.Exit(1)
     }
+
+    // check for header & parse out file content
+    nullCharIndex := bytes.IndexByte(blobData, '\x00')
+    if nullCharIndex < 0 {
+      fmt.Fprintf(os.Stderr, "Error reading file, no header found\n")
+      os.Exit(1)
+    }
+
+    content := blobData[nullCharIndex+1:]
+
+    fmt.Print(string(content))
   }
 }
