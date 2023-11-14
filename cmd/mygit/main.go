@@ -29,36 +29,41 @@ func main() {
 		os.Exit(1)
 	}
 
+  var err error
 	switch command := os.Args[1]; command {
 	case "init":
-    initGit()
+    err = initGit()
   case "cat-file":
-    catFile(os.Args[2:])
-
+    err = catFile(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command %s\n", command)
 		os.Exit(1)
 	}
+
+  if err != nil {
+    os.Exit(1)
+  }
 }
 
-func initGit() {
+func initGit() error {
   for _, dir := range []string{".git", ".git/objects", ".git/refs"} {
     if err := os.MkdirAll(dir, 0755); err != nil {
       fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
-      os.Exit(1)
+      return err
     }
   }
 
   headFileContents := []byte("ref: refs/heads/master\n")
   if err := os.WriteFile(".git/HEAD", headFileContents, 0644); err != nil {
     fmt.Fprintf(os.Stderr, "Error writing file: %s\n", err)
-    os.Exit(1)
+    return err
   }
 
   fmt.Println("Initialized git directory")
+  return nil
 }
 
-func catFile(args []string) {
+func catFile(args []string) error {
   catFileCmd := flag.NewFlagSet("cat-file", flag.ExitOnError)
 
   // Define flags for the cat-file subcommand
@@ -68,20 +73,20 @@ func catFile(args []string) {
   err := catFileCmd.Parse(args)
   if err != nil {
       fmt.Fprintf(os.Stderr, "Error parsing flags for cat-file: %s\n", err)
-      os.Exit(1)
+      return err
   }
 
   // Check if the -p flag is provided
   if *pFlag {
     if catFileCmd.NArg() < 1 {
       fmt.Fprintf(os.Stderr, "usage: mygit cat-file -p {hash}\n")
-      os.Exit(1)
+      return err
     }
 
     hash := catFileCmd.Arg(0)
     if !isValidSHA1(hash) {
       fmt.Fprintf(os.Stderr, "The provided hash could not be verified, please provide a valid SHA1 hash\n")
-      os.Exit(1)
+      return err
     }
 
     dir, file := hash[:2], hash[2:]
@@ -95,7 +100,7 @@ func catFile(args []string) {
       } else {
         fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
       }
-      os.Exit(1)
+      return err
     }   
     defer compressedBlob.Close()
 
@@ -103,7 +108,7 @@ func catFile(args []string) {
     decompressedBlob, err := zlib.NewReader(compressedBlob)
     if err != nil {
       fmt.Fprintf(os.Stderr, "Error decompressing file: %s\n", err)
-      os.Exit(1)
+      return err
     }
     defer decompressedBlob.Close()
 
@@ -111,18 +116,19 @@ func catFile(args []string) {
     blobData, err := io.ReadAll(decompressedBlob)
     if err != nil {
       fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
-      os.Exit(1)
+      return err
     }
 
     // check for header & parse out file content
     nullCharIndex := bytes.IndexByte(blobData, '\x00')
     if nullCharIndex < 0 {
       fmt.Fprintf(os.Stderr, "Error reading file, no header found\n")
-      os.Exit(1)
+      return err
     }
 
     content := blobData[nullCharIndex+1:]
 
     fmt.Print(string(content))
   }
+  return nil
 }
