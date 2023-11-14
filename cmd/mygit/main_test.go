@@ -85,7 +85,7 @@ func setupTestFiles(t *testing.T) {
 	zw := zlib.NewWriter(f)
 	defer zw.Close() 
 
-	_, err = zw.Write([]byte("if you're reading this it worked"))
+	_, err = zw.Write([]byte("header\x00if you're reading this it worked"))
 	if err != nil {
     t.Fatalf("Failed to write data to test file: %v", err)
 	}
@@ -95,15 +95,15 @@ func cleanupTestFiles() {
   os.Remove(".git/objects/a9/4a8fe5ccb19ba61c4c0873d391e987982fbbd3")
 }
 
-func TestMain(t *testing.T) {
+func TestCatFile(t *testing.T) {
   cases := []struct {
     args       []string
     wantStdout string
     wantStderr string
   }{
-    {[]string{"", "-p", "cat-file", "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"}, "if you're reading this it worked", ""},
-    {[]string{"", "-p","cat-file", "invalidsha1"}, "", "The provided hash could not be verified, please provide a valid SHA1 hash\n"},
-    {[]string{"", "-p", "cat-file", "67385b86859e3265d93eaf38cad7d06533ac4998"}, "", "The file corresponding to the hash 67385b86859e3265d93eaf38cad7d06533ac4998 does not exist.\n"},
+    {[]string{ "-p", "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"}, "if you're reading this it worked", ""},
+    {[]string{"-p", "invalidsha1"}, "", "The provided hash could not be verified, please provide a valid SHA1 hash\n"},
+    {[]string{"-p", "67385b86859e3265d93eaf38cad7d06533ac4998"}, "", "The file corresponding to the hash 67385b86859e3265d93eaf38cad7d06533ac4998 does not exist.\n"},
   }
 
   setupTestFiles(t)
@@ -112,14 +112,11 @@ func TestMain(t *testing.T) {
 
   for _, c := range cases {
     t.Run(c.args[1], func(t *testing.T) {
-      // Set os.Args to the test case 
-      os.Args = c.args
-
       // Capture output
       stdout, stderr, restore := captureOutput()
 
-      main()
-      // fmt.Fprintf(os.Stderr, "The provided hash could not be verified, please provide a valid SHA1 hash\n")
+      catFile(c.args)
+
       restore()
 
       if got := stdout.String(); got != c.wantStdout {
