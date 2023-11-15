@@ -196,16 +196,16 @@ func hashObject(args []string) error {
   // if w flag, Write
   if *wFlag {
     dir, file := hash[:2], hash[2:]
-    path := filepath.Join("./.git/objects", dir, file)
+    path := filepath.Join(".git/objects", dir)
 
     if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
-      err := os.MkdirAll(dir, os.ModePerm)
-      if err != nil {
-        fmt.Fprintf(os.Stderr, "Error creating directory: %s", err)
+      if err := os.MkdirAll(path, 0755); err != nil {
+        fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
         return err
       }
     }
 
+    path = filepath.Join(path, file)
     objectFile, err := os.Create(path)
     if err != nil {
       fmt.Fprintf(os.Stderr, "Error creating file: %s", err)
