@@ -62,13 +62,7 @@ func captureOutput() (*bytes.Buffer, *bytes.Buffer, func()) {
     return &bufOut, &bufErr, cleanup
 }
 
-func setupTestFiles(t *testing.T) {
-  for _, dir := range []string{".git", ".git/objects"} {
-    if err := os.MkdirAll(dir, 0755); err != nil {
-      t.Fatalf("Failed to create test directory: %v", err)
-    }
-  }
-
+func setupCatFileTestFiles(t *testing.T) {
   for _, dir := range []string{".git", ".git/objects", ".git/objects/a9"} {
     if err := os.MkdirAll(dir, 0755); err != nil {
       t.Fatalf("Failed to create test directory: %v", err)
@@ -91,7 +85,7 @@ func setupTestFiles(t *testing.T) {
 	}
 }
 
-func cleanupTestFiles() {
+func cleanupCatFileTestFiles() {
   os.Remove(".git/objects/a9/4a8fe5ccb19ba61c4c0873d391e987982fbbd3")
 }
 
@@ -103,11 +97,11 @@ func TestCatFile(t *testing.T) {
   }{
     {[]string{ "-p", "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"}, "if you're reading this it worked", ""},
     {[]string{"-p", "invalidsha1"}, "", "The provided hash could not be verified, please provide a valid SHA1 hash\n"},
-    {[]string{"-p", "67385b86859e3265d93eaf38cad7d06533ac4998"}, "", "The file corresponding to the hash 67385b86859e3265d93eaf38cad7d06533ac4998 does not exist.\n"},
+    {[]string{"-p", "67385b86859e3265d93eaf38cad7d06533ac4998"}, "", "The object corresponding to the hash 67385b86859e3265d93eaf38cad7d06533ac4998 does not exist.\n"},
   }
 
-  setupTestFiles(t)
-  defer cleanupTestFiles()
+  setupCatFileTestFiles(t)
+  defer cleanupCatFileTestFiles()
 
 
   for _, c := range cases {
@@ -116,6 +110,63 @@ func TestCatFile(t *testing.T) {
       stdout, stderr, restore := captureOutput()
 
       catFile(c.args)
+
+      restore()
+
+      if got := stdout.String(); got != c.wantStdout {
+        t.Errorf("stdout = %q, want %q", got, c.wantStdout)
+      }
+
+      if got := stderr.String(); got != c.wantStderr {
+        t.Errorf("stderr = %q, want %q", got, c.wantStderr)
+      }
+    })
+  }
+}
+
+func cleanupHashObjectTestFiles() {
+  os.Remove("test.txt")
+}
+
+func setupHashObjectTestFiles(t *testing.T) {
+  for _, dir := range []string{".git", ".git/objects"} {
+    if err := os.MkdirAll(dir, 0755); err != nil {
+      t.Fatalf("Failed to create test directory: %v", err)
+    }
+  }
+
+  filePath := "test.txt"
+  f, err := os.Create(filePath)
+  if err != nil {
+    t.Fatalf("Failed to create test file: %v", err)
+  }
+  defer f.Close()
+
+	_, err = f.Write([]byte("if you're reading this it worked"))
+	if err != nil {
+    t.Fatalf("Failed to write data to test file: %v", err)
+	}
+}
+
+func TestHashFile(t *testing.T) {
+  cases := []struct {
+    args       []string
+    wantStdout string
+    wantStderr string
+  }{
+    {[]string{"-w", "test.txt"}, "c12ff9bfd17010b62e9041ad4a414b3d608471af", ""},
+  }
+
+  setupHashObjectTestFiles(t)
+  defer cleanupHashObjectTestFiles()
+
+
+  for _, c := range cases {
+    t.Run(c.args[1], func(t *testing.T) {
+      // Capture output
+      stdout, stderr, restore := captureOutput()
+
+      hashObject(c.args)
 
       restore()
 
