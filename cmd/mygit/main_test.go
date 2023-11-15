@@ -154,7 +154,7 @@ func TestHashFile(t *testing.T) {
     wantStdout string
     wantStderr string
   }{
-    {[]string{"-w", "test.txt"}, "c12ff9bfd17010b62e9041ad4a414b3d608471af", ""},
+    {[]string{"-w", "test.txt"}, "2991c482cf8b6f44292431b62733a2751704e1ec", ""},
   }
 
   setupHashObjectTestFiles(t)

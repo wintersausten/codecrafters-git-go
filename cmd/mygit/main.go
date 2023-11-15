@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 )
 
 func isValidSHA1(hash string) bool {
@@ -183,10 +184,15 @@ func hashObject(args []string) error {
   // TODO: replace with bufio to handle larger files
   fileContents, err := io.ReadAll(file)
 
-  // add header
-  header := []byte("header")
-  header = append(header, '\x00')
-  object := append(header, fileContents...)
+  // add header (assumes blob)
+  var objectBuffer bytes.Buffer
+  objectBuffer.WriteString("blob")
+  objectBuffer.WriteByte(' ')
+  objectBuffer.WriteString(strconv.Itoa(len(fileContents)))
+  objectBuffer.WriteByte(0)
+  objectBuffer.Write(fileContents)
+  object := objectBuffer.Bytes()
+  
 
   // hash file file contents 
   hasher := sha1.New()
@@ -220,3 +226,4 @@ func hashObject(args []string) error {
   fmt.Print(hash)
   return nil
 }
+
