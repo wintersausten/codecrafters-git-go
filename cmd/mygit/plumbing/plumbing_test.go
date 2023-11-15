@@ -1,4 +1,4 @@
-package main
+package plumbing
 
 import (
 	"os"
@@ -109,7 +109,7 @@ func TestCatFile(t *testing.T) {
       // Capture output
       stdout, stderr, restore := captureOutput()
 
-      catFile(c.args)
+      CatFile(c.args)
 
       restore()
 
@@ -166,7 +166,7 @@ func TestHashFile(t *testing.T) {
       // Capture output
       stdout, stderr, restore := captureOutput()
 
-      hashObject(c.args)
+      HashObject(c.args)
 
       restore()
 
