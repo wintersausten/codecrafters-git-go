@@ -220,6 +220,7 @@ func hashObject(args []string) error {
     defer objectFile.Close()
 
     compressedObjectWriter := zlib.NewWriter(objectFile)
+    defer compressedObjectWriter.Close()
     compressedObjectWriter.Write(object)
   }
 
