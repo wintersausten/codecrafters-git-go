@@ -1,7 +1,6 @@
 package plumbing
 
 import (
-	"bytes"
 	"compress/zlib"
 	"crypto/sha1"
 	"encoding/hex"
@@ -12,7 +11,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 var hashObjectCmd = flag.NewFlagSet("hashObject", flag.ExitOnError)
@@ -40,53 +38,54 @@ func HashObject(args []string) error {
   // TODO: replace with bufio to handle larger files
   fileContents, err := io.ReadAll(file)
 
-  // add header (assumes blob)
-  var objectBuffer bytes.Buffer
-  objectBuffer.WriteString("blob")
-  objectBuffer.WriteByte(' ')
-  objectBuffer.WriteString(strconv.Itoa(len(fileContents)))
-  objectBuffer.WriteByte(0)
-  objectBuffer.Write(fileContents)
-  object := objectBuffer.Bytes()
-  
+  // create GitObject from file contents
+  object := NewGitObject(BlobType, fileContents, len(fileContents))
+  objectFileContents := object.GetObjectFileContents()
 
-  // hash file file contents 
-  hasher := sha1.New()
-  hasher.Write(object)
-  hash := hex.EncodeToString(hasher.Sum(nil))
+  hash := generateSHA1(objectFileContents)
 
   // if w flag, Write
   if *wFlag {
-    dir, file := hash[:2], hash[2:]
-    path := filepath.Join(".git/objects", dir)
-
-    if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
-      if err := os.MkdirAll(path, 0755); err != nil {
-        fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
-        return err
-      }
-    }
-
-    path = filepath.Join(path, file)
-    objectFile, err := os.Create(path)
-    if err != nil {
-      fmt.Fprintf(os.Stderr, "Error creating file: %s", err)
-      return err
-    }
-    defer objectFile.Close()
-
-    compressedObjectWriter := zlib.NewWriter(objectFile)
-    if err != nil {
-      fmt.Fprintf(os.Stderr, "Error creating file: %s", err)
-      return err
-    }
-    defer objectFile.Close()
-    defer compressedObjectWriter.Close()
-    compressedObjectWriter.Write(object)
+    writeObject(objectFileContents, hash)
   }
 
   fmt.Print(hash)
   return nil
 }
 
+func generateSHA1(data []byte) string {
+  hasher := sha1.New()
+  hasher.Write(data)
+  return hex.EncodeToString(hasher.Sum(nil))
+}
 
+func writeObject (contents []byte, hash string) error {
+  dir, file := hash[:2], hash[2:]
+  path := filepath.Join(".git/objects", dir)
+
+  if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
+    if err := os.MkdirAll(path, 0755); err != nil {
+      fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
+      return err
+    }
+  }
+
+  path = filepath.Join(path, file)
+  objectFile, err := os.Create(path)
+  if err != nil {
+    fmt.Fprintf(os.Stderr, "Error creating file: %s", err)
+    return err
+  }
+  defer objectFile.Close()
+
+  compressedObjectWriter := zlib.NewWriter(objectFile)
+  if err != nil {
+    fmt.Fprintf(os.Stderr, "Error creating file: %s", err)
+    return err
+  }
+  defer objectFile.Close()
+  defer compressedObjectWriter.Close()
+  compressedObjectWriter.Write(contents)
+
+  return nil
+}

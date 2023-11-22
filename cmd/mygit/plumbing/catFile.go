@@ -1,13 +1,13 @@
 package plumbing
 
 import (
-	"bytes"
 	"compress/zlib"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 )
 
@@ -43,41 +43,25 @@ func CatFile(args []string) error {
     return err
   }
 
-  objectData, err := readObject(hash)
+  object, err := readObject(hash)
   if err != nil {
     return err
   }
 
   if *pFlag {
-    // && assumed object type is blob
-    err := printBlob(objectData)
+    data, err := object.Serialize()
     if err != nil {
+      fmt.Fprintf(os.Stderr, "Error serializing object file: %s\n", err)
       return err
     }
+    fmt.Print(string(data))
   }
     return nil
 }
 
-func printBlob (objectData []byte) error {
-  
-  // parse out header
-  // TODO: move this into the object read (also create an object abstraction)
-  nullCharIndex := bytes.IndexByte(objectData, '\x00')
-  if nullCharIndex < 0 {
-    fmt.Fprintf(os.Stderr, "Error reading file, no header found\n")
-    return errors.New("No header found in object file")
-  }
-
-  content := objectData[nullCharIndex+1:]
-
-  fmt.Print(string(content))
-  return nil
-}
-
-func readObject(hash string) ([]byte, error) {
+func readObject(hash string) (*GitObject, error) {
   dir, file := hash[:2], hash[2:]
-  // TODO: use filepath
-  objectPath := fmt.Sprintf(".git/objects/%s/%s", dir, file)
+  objectPath := filepath.Join(".git/objects", dir, file)
 
   // open compressed file 
   compressedObject, err := os.Open(objectPath)
@@ -106,7 +90,13 @@ func readObject(hash string) ([]byte, error) {
     fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
     return nil, err
   }
-  
-  return objectData, nil
+
+  object, err := DeserializeGitObject(objectData)
+  if err != nil {
+    fmt.Fprintf(os.Stderr, "Error deserializing object file: %s\n", err)
+    return nil, err
+  }
+
+  return object, nil
 }
 
