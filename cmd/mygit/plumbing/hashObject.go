@@ -1,16 +1,10 @@
 package plumbing
 
 import (
-	"compress/zlib"
-	"crypto/sha1"
-	"encoding/hex"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
-	"path/filepath"
 )
 
 var hashObjectCmd = flag.NewFlagSet("hashObject", flag.ExitOnError)
@@ -39,53 +33,14 @@ func HashObject(args []string) error {
   fileContents, err := io.ReadAll(file)
 
   // create GitObject from file contents
-  object := NewGitObject(BlobType, fileContents, len(fileContents))
-  objectFileContents := object.GetObjectFileContents()
-
-  hash := generateSHA1(objectFileContents)
+  object := NewGitObject(BlobType, fileContents)
+  hash := object.GetHash()
 
   // if w flag, Write
   if *wFlag {
-    writeObject(objectFileContents, hash)
+    writeGitObject(object)
   }
 
   fmt.Print(hash)
-  return nil
-}
-
-func generateSHA1(data []byte) string {
-  hasher := sha1.New()
-  hasher.Write(data)
-  return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func writeObject (contents []byte, hash string) error {
-  dir, file := hash[:2], hash[2:]
-  path := filepath.Join(".git/objects", dir)
-
-  if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
-    if err := os.MkdirAll(path, 0755); err != nil {
-      fmt.Fprintf(os.Stderr, "Error creating directory: %s\n", err)
-      return err
-    }
-  }
-
-  path = filepath.Join(path, file)
-  objectFile, err := os.Create(path)
-  if err != nil {
-    fmt.Fprintf(os.Stderr, "Error creating file: %s", err)
-    return err
-  }
-  defer objectFile.Close()
-
-  compressedObjectWriter := zlib.NewWriter(objectFile)
-  if err != nil {
-    fmt.Fprintf(os.Stderr, "Error creating file: %s", err)
-    return err
-  }
-  defer objectFile.Close()
-  defer compressedObjectWriter.Close()
-  compressedObjectWriter.Write(contents)
-
   return nil
 }

@@ -79,7 +79,7 @@ func setupCatFileTestFiles(t *testing.T) {
 	zw := zlib.NewWriter(f)
 	defer zw.Close() 
 
-	_, err = zw.Write([]byte("blob 1\x00if you're reading this it worked"))
+	_, err = zw.Write([]byte("blob 32\x00if you're reading this it worked"))
 	if err != nil {
     t.Fatalf("Failed to write data to test file: %v", err)
 	}

@@ -1,13 +1,9 @@
 package plumbing
 
 import (
-	"compress/zlib"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"regexp"
 )
 
@@ -43,60 +39,15 @@ func CatFile(args []string) error {
     return err
   }
 
-  object, err := readObject(hash)
+  object, err := readGitObject(hash)
   if err != nil {
     return err
   }
 
   if *pFlag {
-    data, err := object.Serialize()
-    if err != nil {
-      fmt.Fprintf(os.Stderr, "Error serializing object file: %s\n", err)
-      return err
-    }
+    data := object.Serialize()
     fmt.Print(string(data))
   }
-    return nil
+
+  return nil
 }
-
-func readObject(hash string) (*GitObject, error) {
-  dir, file := hash[:2], hash[2:]
-  objectPath := filepath.Join(".git/objects", dir, file)
-
-  // open compressed file 
-  compressedObject, err := os.Open(objectPath)
-  if err != nil {
-    if errors.Is(err, os.ErrNotExist) {
-      fmt.Fprintf(os.Stderr, "The object corresponding to the hash %s does not exist.\n", hash)
-    } else {
-      fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
-    }
-    return nil, err
-  }   
-  defer compressedObject.Close()
-
-  // setup decompressor
-  decompressedObject, err := zlib.NewReader(compressedObject)
-  if err != nil {
-    fmt.Fprintf(os.Stderr, "Error decompressing file: %s\n", err)
-    return nil, err
-  }
-  defer decompressedObject.Close()
-
-  // read the file data
-  // consider using bufio vs io.ReadAll if processing larger files
-  objectData, err := io.ReadAll(decompressedObject)
-  if err != nil {
-    fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
-    return nil, err
-  }
-
-  object, err := DeserializeGitObject(objectData)
-  if err != nil {
-    fmt.Fprintf(os.Stderr, "Error deserializing object file: %s\n", err)
-    return nil, err
-  }
-
-  return object, nil
-}
-
