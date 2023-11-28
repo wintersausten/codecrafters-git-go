@@ -1,6 +1,7 @@
 package plumbing
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -8,7 +9,8 @@ import (
 
 var lsTreeCmd = flag.NewFlagSet("ls-tree", flag.ExitOnError)
 var nameOnlyFlag = lsTreeCmd.Bool("name-only", false, "List only the file name of tree entries")
-func WriteTree(args []string) error {
+
+func LsTree(args []string) error {
   err := lsTreeCmd.Parse(args)
   if err != nil {
       fmt.Fprintf(os.Stderr, "Error parsing flags for ls-tree: %s\n", err)
@@ -31,15 +33,19 @@ func WriteTree(args []string) error {
     return err
   }
 
-  data := object.Serialize()
-
-  if *nameOnlyFlag {
-    if err != nil {
-      fmt.Fprintf(os.Stderr, "Error serializing object file: %s\n", err)
-      return err
-    }
-    fmt.Print(string(data))
+  tree, ok := object.(*GitTree);
+  // assert object is a gittree
+  if !ok {
+    fmt.Fprintf(os.Stderr, "The object associated with the provided hash is not a tree\n")
+    return errors.New("The object associated with the provided hash is not a tree\n")
   }
+
+  var format TreeFormatOption
+  if *nameOnlyFlag {
+    format = NameOnly
+  }
+
+  fmt.Print(tree.PrettyPrint(format))
   
   return nil
 }

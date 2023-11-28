@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-
 	"github.com/codecrafters-io/git-starter-go/cmd/mygit/plumbing"
 )
 
@@ -22,6 +21,8 @@ func main() {
     err = plumbing.CatFile(os.Args[2:])
   case "hash-object":
     err = plumbing.HashObject(os.Args[2:])
+  case "ls-tree":
+    err = plumbing.LsTree(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command %s\n", command)
 		os.Exit(1)

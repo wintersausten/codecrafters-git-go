@@ -37,6 +37,10 @@ func NewGitObject (objectType GitObjectType, contents []byte) GitObject {
     blob := NewGitBlob()
     blob.Deserialize(contents)
     gitObject = blob
+  case TreeType:
+    tree := NewGitTree()
+    tree.Deserialize(contents)
+    gitObject = tree
   default:
     panic("Attempted to deserialize a type of git object that hasn't been implemented yet")
   }
